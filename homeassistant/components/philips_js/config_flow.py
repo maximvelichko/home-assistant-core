@@ -1,7 +1,5 @@
 """Config flow for Philips TV integration."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 import platform
 from typing import Any
@@ -82,7 +80,7 @@ class PhilipsJSConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
         await hub.getSystem()
-        await hub.setTransport(hub.secured_transport)
+        await hub.setTransport(hub.secured_transport, hub.api_version_detected)
 
         if not hub.system or not hub.name:
             raise ConnectionFailure("System data or name is empty")

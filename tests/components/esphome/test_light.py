@@ -56,7 +56,6 @@ async def test_light_on_off(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[ESPColorMode.ON_OFF],
@@ -98,7 +97,6 @@ async def test_light_brightness(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[LightColorCapability.BRIGHTNESS],
@@ -226,7 +224,6 @@ async def test_light_legacy_brightness(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[LightColorCapability.BRIGHTNESS, 2],
@@ -282,7 +279,6 @@ async def test_light_brightness_on_off(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[ESPColorMode.ON_OFF, ESPColorMode.BRIGHTNESS],
@@ -358,7 +354,6 @@ async def test_light_legacy_white_converted_to_brightness(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[
@@ -423,7 +418,6 @@ async def test_light_legacy_white_with_rgb(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[color_mode, color_mode_2],
@@ -478,7 +472,6 @@ async def test_light_brightness_on_off_with_unknown_color_mode(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[
@@ -555,7 +548,6 @@ async def test_light_on_and_brightness(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[
@@ -607,16 +599,13 @@ async def test_rgb_color_temp_light(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=color_modes,
         )
     ]
     states = [
-        LightState(
-            key=1, state=True, brightness=100, color_mode=ESPColorMode.BRIGHTNESS
-        )
+        LightState(key=1, state=True, brightness=100, color_mode=ESPColorMode.RGB)
     ]
     user_service = []
     await mock_generic_device_entry(
@@ -640,7 +629,7 @@ async def test_rgb_color_temp_light(
             call(
                 key=1,
                 state=True,
-                color_mode=ESPColorMode.BRIGHTNESS,
+                color_mode=ESPColorMode.RGB,
                 device_id=0,
             )
         ]
@@ -658,7 +647,7 @@ async def test_rgb_color_temp_light(
             call(
                 key=1,
                 state=True,
-                color_mode=ESPColorMode.BRIGHTNESS,
+                color_mode=ESPColorMode.RGB,
                 brightness=pytest.approx(0.4980392156862745),
                 device_id=0,
             )
@@ -698,7 +687,6 @@ async def test_light_rgb(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             supported_color_modes=[
                 LightColorCapability.RGB
                 | LightColorCapability.ON_OFF
@@ -821,7 +809,6 @@ async def test_light_rgbw(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             supported_color_modes=[
                 LightColorCapability.RGB
                 | LightColorCapability.WHITE
@@ -991,7 +978,6 @@ async def test_light_rgbww_with_cold_warm_white_support(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[
@@ -1200,7 +1186,6 @@ async def test_light_rgbww_without_cold_warm_white_support(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[
@@ -1439,7 +1424,6 @@ async def test_light_color_temp(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153.846161,
             max_mireds=370.370361,
             supported_color_modes=[
@@ -1514,7 +1498,6 @@ async def test_light_color_temp_no_mireds_set(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=0,
             max_mireds=0,
             supported_color_modes=[
@@ -1610,7 +1593,6 @@ async def test_light_color_temp_legacy(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153.846161,
             max_mireds=370.370361,
             supported_color_modes=[
@@ -1695,7 +1677,6 @@ async def test_light_rgb_legacy(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153.846161,
             max_mireds=370.370361,
             supported_color_modes=[
@@ -1795,7 +1776,6 @@ async def test_light_effects(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             effects=["effect1", "effect2"],
@@ -1859,7 +1839,6 @@ async def test_only_cold_warm_white_support(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[color_modes],
@@ -1934,7 +1913,106 @@ async def test_only_cold_warm_white_support(
                 key=1,
                 state=True,
                 color_mode=color_modes,
-                color_temperature=400.0,
+                color_temperature=pytest.approx(400.0),
+                cold_white=pytest.approx(0.0),
+                warm_white=pytest.approx(1.0),
+                device_id=0,
+            )
+        ]
+    )
+    mock_client.light_command.reset_mock()
+
+    # Test setting brightness and color temp together does not
+    # result in brightness being applied twice (b² effect)
+    await hass.services.async_call(
+        LIGHT_DOMAIN,
+        SERVICE_TURN_ON,
+        {
+            ATTR_ENTITY_ID: "light.test_my_light",
+            ATTR_BRIGHTNESS: 127,
+            ATTR_COLOR_TEMP_KELVIN: 3600,
+        },
+        blocking=True,
+    )
+    # 3600K -> 277.78 mireds, min=153, max=400
+    # ww_frac = (277.78 - 153) / (400 - 153) = 0.505
+    # cw_frac = 0.495
+    # max_frac = 0.505, cold_white = 0.495/0.505, warm_white = 1.0
+    mock_client.light_command.assert_has_calls(
+        [
+            call(
+                key=1,
+                state=True,
+                brightness=pytest.approx(0.4980392156862745),
+                color_mode=color_modes,
+                color_temperature=pytest.approx(277.7777777777778),
+                cold_white=pytest.approx(0.9798, abs=1e-3),
+                warm_white=pytest.approx(1.0),
+                device_id=0,
+            )
+        ]
+    )
+    mock_client.light_command.reset_mock()
+
+
+async def test_cold_warm_white_no_mireds_set(
+    hass: HomeAssistant,
+    mock_client: APIClient,
+    mock_generic_device_entry: MockGenericDeviceEntryType,
+) -> None:
+    """Test cold/warm white light with no mireds set doesn't divide by zero."""
+    mock_client.api_version = APIVersion(1, 7)
+    color_modes = (
+        LightColorCapability.COLD_WARM_WHITE
+        | LightColorCapability.ON_OFF
+        | LightColorCapability.BRIGHTNESS
+    )
+    entity_info = [
+        LightInfo(
+            object_id="mylight",
+            key=1,
+            name="my light",
+            min_mireds=0,
+            max_mireds=0,
+            supported_color_modes=[color_modes],
+        )
+    ]
+    states = [
+        LightState(
+            key=1,
+            state=True,
+            brightness=100,
+            warm_white=1,
+            cold_white=1,
+            color_mode=color_modes,
+        )
+    ]
+    user_service = []
+    await mock_generic_device_entry(
+        mock_client=mock_client,
+        entity_info=entity_info,
+        user_service=user_service,
+        states=states,
+    )
+    state = hass.states.get("light.test_my_light")
+    assert state is not None
+    assert state.state == STATE_ON
+
+    await hass.services.async_call(
+        LIGHT_DOMAIN,
+        SERVICE_TURN_ON,
+        {ATTR_ENTITY_ID: "light.test_my_light", ATTR_COLOR_TEMP_KELVIN: 3600},
+        blocking=True,
+    )
+    mock_client.light_command.assert_has_calls(
+        [
+            call(
+                key=1,
+                state=True,
+                color_mode=color_modes,
+                color_temperature=pytest.approx(277.7777777777778),
+                cold_white=1.0,
+                warm_white=1.0,
                 device_id=0,
             )
         ]
@@ -1955,7 +2033,6 @@ async def test_light_no_color_modes(
             object_id="mylight",
             key=1,
             name="my light",
-            unique_id="my_light",
             min_mireds=153,
             max_mireds=400,
             supported_color_modes=[color_mode],

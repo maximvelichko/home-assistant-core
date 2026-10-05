@@ -1,7 +1,6 @@
 """Matter Fan platform support."""
 
-from __future__ import annotations
-
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from chip.clusters import Objects as clusters
@@ -13,13 +12,12 @@ from homeassistant.components.fan import (
     FanEntityDescription,
     FanEntityFeature,
 )
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .entity import MatterEntity
-from .helpers import get_matter
+from .entity import MatterEntity, MatterEntityDescription
+from .helpers import MatterConfigEntry
 from .models import MatterDiscoverySchema
 
 FanControlFeature = clusters.FanControl.Bitmaps.Feature
@@ -44,12 +42,17 @@ PRESET_SLEEP_WIND = "sleep_wind"
 
 async def async_setup_entry(
     hass: HomeAssistant,
-    config_entry: ConfigEntry,
+    config_entry: MatterConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up Matter fan from Config Entry."""
-    matter = get_matter(hass)
+    matter = config_entry.runtime_data.adapter
     matter.register_platform_handler(Platform.FAN, async_add_entities)
+
+
+@dataclass(frozen=True, kw_only=True)
+class MatterFanEntityDescription(FanEntityDescription, MatterEntityDescription):
+    """Describe Matter Fan entities."""
 
 
 class MatterFan(MatterEntity, FanEntity):
@@ -308,7 +311,7 @@ class MatterFan(MatterEntity, FanEntity):
 DISCOVERY_SCHEMAS = [
     MatterDiscoverySchema(
         platform=Platform.FAN,
-        entity_description=FanEntityDescription(
+        entity_description=MatterFanEntityDescription(
             key="MatterFan",
             name=None,
         ),
@@ -317,7 +320,11 @@ DISCOVERY_SCHEMAS = [
         required_attributes=(
             clusters.FanControl.Attributes.FanMode,
             clusters.FanControl.Attributes.PercentCurrent,
+            clusters.FanControl.Attributes.PercentSetting,
         ),
+        # PercentSetting SHALL be null when FanMode is Auto (spec 4.4.6.3),
+        # so allow null values to not block discovery in that state.
+        allow_none_value=True,
         optional_attributes=(
             clusters.FanControl.Attributes.SpeedSetting,
             clusters.FanControl.Attributes.RockSetting,

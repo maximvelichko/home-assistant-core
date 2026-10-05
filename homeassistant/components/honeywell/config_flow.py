@@ -1,7 +1,5 @@
 """Config flow to configure the honeywell integration."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from typing import Any
 
@@ -12,7 +10,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import callback
@@ -136,7 +134,7 @@ class HoneywellConfigFlow(ConfigFlow, domain=DOMAIN):
         return HoneywellOptionsFlowHandler()
 
 
-class HoneywellOptionsFlowHandler(OptionsFlow):
+class HoneywellOptionsFlowHandler(OptionsFlowWithReload):
     """Config flow options for Honeywell."""
 
     async def async_step_init(self, user_input=None) -> ConfigFlowResult:

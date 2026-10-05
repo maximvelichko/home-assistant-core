@@ -11,7 +11,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util.color import brightness_to_value, value_to_brightness
 
 from .coordinator import QbusConfigEntry
-from .entity import QbusEntity, add_new_outputs
+from .entity import QbusEntity, create_new_entities
 
 PARALLEL_UPDATES = 0
 
@@ -27,13 +27,13 @@ async def async_setup_entry(
     added_outputs: list[QbusMqttOutput] = []
 
     def _check_outputs() -> None:
-        add_new_outputs(
+        entities = create_new_entities(
             coordinator,
             added_outputs,
             lambda output: output.type == "analog",
             QbusLight,
-            async_add_entities,
         )
+        async_add_entities(entities)
 
     _check_outputs()
     entry.async_on_unload(coordinator.async_add_listener(_check_outputs))
@@ -79,8 +79,10 @@ class QbusLight(QbusEntity, LightEntity):
         await self._async_publish_output_state(state)
 
     async def _handle_state_received(self, state: QbusMqttAnalogState) -> None:
-        percentage = round(state.read_percentage())
-        self._set_state(percentage)
+        percentage = state.read_percentage()
+
+        if percentage is not None:
+            self._set_state(round(percentage))
 
     def _set_state(self, percentage: int) -> None:
         self._attr_is_on = percentage > 0

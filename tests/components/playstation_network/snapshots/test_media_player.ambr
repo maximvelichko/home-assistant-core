@@ -1,8 +1,9 @@
 # serializer version: 1
 # name: test_media_player_psvita[presence_payload0][media_player.playstation_vita-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -21,6 +22,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -39,9 +41,7 @@
   StateSnapshot({
     'attributes': ReadOnlyDict({
       'device_class': 'receiver',
-      'entity_picture_local': None,
       'friendly_name': 'PlayStation Vita',
-      'media_content_type': <MediaType.GAME: 'game'>,
       'supported_features': <MediaPlayerEntityFeature: 0>,
     }),
     'context': <ANY>,
@@ -49,13 +49,14 @@
     'last_changed': <ANY>,
     'last_reported': <ANY>,
     'last_updated': <ANY>,
-    'state': 'standby',
+    'state': 'off',
   })
 # ---
 # name: test_media_player_psvita[presence_payload1][media_player.playstation_vita-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -74,6 +75,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -110,8 +112,9 @@
 # ---
 # name: test_media_player_psvita[presence_payload2][media_player.playstation_vita-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -130,6 +133,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -163,8 +167,9 @@
 # ---
 # name: test_platform[PS4_idle][media_player.playstation_4-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -183,6 +188,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -216,8 +222,9 @@
 # ---
 # name: test_platform[PS4_offline][media_player.playstation_4-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -236,6 +243,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -267,8 +275,9 @@
 # ---
 # name: test_platform[PS4_playing][media_player.playstation_4-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -287,6 +296,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -323,8 +333,9 @@
 # ---
 # name: test_platform[PS5_idle][media_player.playstation_5-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -343,6 +354,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -376,8 +388,9 @@
 # ---
 # name: test_platform[PS5_offline][media_player.playstation_5-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -396,6 +409,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,
@@ -427,8 +441,9 @@
 # ---
 # name: test_platform[PS5_playing][media_player.playstation_5-entry]
   EntityRegistryEntrySnapshot({
-    'aliases': set({
-    }),
+    'aliases': list([
+      None,
+    ]),
     'area_id': None,
     'capabilities': dict({
     }),
@@ -447,6 +462,7 @@
     'labels': set({
     }),
     'name': None,
+    'object_id_base': None,
     'options': dict({
     }),
     'original_device_class': <MediaPlayerDeviceClass.RECEIVER: 'receiver'>,

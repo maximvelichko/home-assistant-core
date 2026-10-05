@@ -1,7 +1,5 @@
 """Support for displaying collected data over SNMP."""
 
-from __future__ import annotations
-
 from datetime import timedelta
 import logging
 from struct import unpack
@@ -217,7 +215,7 @@ class SnmpSensor(ManualTriggerSensorEntity):
                 self.entity_id, variables, STATE_UNKNOWN
             )
 
-        self._attr_native_value = value
+        self._set_native_value_with_possible_timestamp(value)
         self._process_manual_data(variables)
 
 

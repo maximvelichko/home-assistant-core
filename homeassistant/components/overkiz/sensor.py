@@ -1,7 +1,5 @@
 """Support for Overkiz sensors."""
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
@@ -120,7 +118,7 @@ SENSOR_DESCRIPTIONS: list[OverkizSensorDescription] = [
         icon="mdi:water",
         native_unit_of_measurement=UnitOfVolume.LITERS,
         device_class=SensorDeviceClass.WATER,
-        state_class=SensorStateClass.TOTAL_INCREASING,
+        state_class=SensorStateClass.TOTAL,
     ),
     OverkizSensorDescription(
         key=OverkizState.IO_OUTLET_ENGINE,
@@ -203,6 +201,20 @@ SENSOR_DESCRIPTIONS: list[OverkizSensorDescription] = [
     ),
     OverkizSensorDescription(
         key=OverkizState.MODBUSLINK_POWER_HEAT_ELECTRICAL,
+        name="Electric power consumption",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    OverkizSensorDescription(
+        key=OverkizState.IO_POWER_HEAT_PUMP,
+        name="Heat pump power consumption",
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.WATT,
+        state_class=SensorStateClass.MEASUREMENT,
+    ),
+    OverkizSensorDescription(
+        key=OverkizState.IO_POWER_HEAT_ELECTRICAL,
         name="Electric power consumption",
         device_class=SensorDeviceClass.POWER,
         native_unit_of_measurement=UnitOfPower.WATT,

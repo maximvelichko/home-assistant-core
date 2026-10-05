@@ -1,7 +1,5 @@
 """Support for MQTT message handling."""
 
-from __future__ import annotations
-
 import asyncio
 from collections import defaultdict
 from collections.abc import AsyncGenerator, Callable, Coroutine, Iterable
@@ -38,11 +36,13 @@ from homeassistant.core import (
     get_hassjob_callable_job_type,
 )
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 from homeassistant.helpers.importlib import async_import_module
 from homeassistant.helpers.start import async_at_started
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import bind_hass
 from homeassistant.setup import SetupPhases, async_pause_setup
 from homeassistant.util.collection import chunked_or_all
 from homeassistant.util.logging import catch_log_exception, log_exception
@@ -63,7 +63,6 @@ from .const import (
     DEFAULT_ENCODING,
     DEFAULT_KEEPALIVE,
     DEFAULT_PORT,
-    DEFAULT_PROTOCOL,
     DEFAULT_QOS,
     DEFAULT_TRANSPORT,
     DEFAULT_WILL,
@@ -71,8 +70,10 @@ from .const import (
     DEFAULT_WS_PATH,
     DOMAIN,
     MQTT_CONNECTION_STATE,
+    MQTT_PROCESSED_SUBSCRIPTIONS,
     PROTOCOL_5,
     PROTOCOL_31,
+    PROTOCOL_311,
     TRANSPORT_WEBSOCKETS,
 )
 from .models import (
@@ -109,6 +110,7 @@ INITIAL_SUBSCRIBE_COOLDOWN = 0.5
 SUBSCRIBE_COOLDOWN = 0.1
 UNSUBSCRIBE_COOLDOWN = 0.1
 TIMEOUT_ACK = 10
+SUBSCRIBE_TIMEOUT = 10
 RECONNECT_INTERVAL_SECONDS = 10
 
 MAX_WILDCARD_SUBSCRIBES_PER_CALL = 1
@@ -170,7 +172,7 @@ async def async_publish(
             # requires bytes as payload
             try:
                 outgoing_payload = outgoing_payload.encode(encoding)
-            except (AttributeError, LookupError, UnicodeEncodeError):
+            except AttributeError, LookupError, UnicodeEncodeError:
                 _LOGGER.error(
                     "Can't encode payload for publishing %s on %s with encoding %s",
                     payload,
@@ -184,7 +186,38 @@ async def async_publish(
     )
 
 
-@bind_hass
+@callback
+def async_on_subscribe_done(
+    hass: HomeAssistant,
+    topic: str,
+    qos: int,
+    on_subscribe_status: CALLBACK_TYPE,
+) -> CALLBACK_TYPE:
+    """Call on_subscribe_done when the matched subscription was completed.
+
+    If a subscription is already present the callback will call
+    on_subscribe_status directly.
+    Call the returned callback to stop and cleanup status monitoring.
+    """
+
+    async def _sync_mqtt_subscribe(subscriptions: list[tuple[str, int]]) -> None:
+        if (topic, qos) not in subscriptions:
+            return
+        hass.loop.call_soon(on_subscribe_status)
+
+    mqtt_data = hass.data[DATA_MQTT]
+    if (
+        mqtt_data.client.connected
+        and mqtt_data.client.is_active_subscription(topic)
+        and not mqtt_data.client.is_pending_subscription(topic)
+    ):
+        hass.loop.call_soon(on_subscribe_status)
+
+    return async_dispatcher_connect(
+        hass, MQTT_PROCESSED_SUBSCRIPTIONS, _sync_mqtt_subscribe
+    )
+
+
 async def async_subscribe(
     hass: HomeAssistant,
     topic: str,
@@ -236,7 +269,6 @@ def async_subscribe_internal(
     return client.async_subscribe(topic, msg_callback, qos, encoding, job_type)
 
 
-@bind_hass
 def subscribe(
     hass: HomeAssistant,
     topic: str,
@@ -299,7 +331,10 @@ class MqttClientSetup:
 
         config = self._config
         clean_session: bool | None = None
-        if (protocol := config.get(CONF_PROTOCOL, DEFAULT_PROTOCOL)) == PROTOCOL_31:
+        # If no protocol setting is set in the config entry data
+        # we assume the config was migrated from YAML, and the
+        # protocol version is defaulting to legacy version 3.1.1.
+        if (protocol := config.get(CONF_PROTOCOL, PROTOCOL_311)) == PROTOCOL_31:
             proto = mqtt.MQTTv31
             clean_session = True
         elif protocol == PROTOCOL_5:
@@ -388,7 +423,10 @@ class MQTT:
         self.loop = hass.loop
         self.config_entry = config_entry
         self.conf = conf
-        self.is_mqttv5 = conf.get(CONF_PROTOCOL, DEFAULT_PROTOCOL) == PROTOCOL_5
+        # If no protocol setting is set in the config entry data
+        # we assume the config was migrated from YAML, and the
+        # protocol version is defaulting to legacy version 3.1.1.
+        self.is_mqttv5 = conf.get(CONF_PROTOCOL, PROTOCOL_311) == PROTOCOL_5
 
         self._simple_subscriptions: defaultdict[str, set[Subscription]] = defaultdict(
             set
@@ -640,11 +678,15 @@ class MQTT:
         if fileno > -1:
             self.loop.remove_writer(sock)
 
-    def _is_active_subscription(self, topic: str) -> bool:
+    def is_active_subscription(self, topic: str) -> bool:
         """Check if a topic has an active subscription."""
         return topic in self._simple_subscriptions or any(
             other.topic == topic for other in self._wildcard_subscriptions
         )
+
+    def is_pending_subscription(self, topic: str) -> bool:
+        """Check if a topic has a pending subscription."""
+        return topic in self._pending_subscriptions
 
     async def async_publish(
         self, topic: str, payload: PublishPayloadType, qos: int, retain: bool
@@ -899,7 +941,7 @@ class MQTT:
     @callback
     def _async_unsubscribe(self, topic: str) -> None:
         """Unsubscribe from a topic."""
-        if self._is_active_subscription(topic):
+        if self.is_active_subscription(topic):
             if self._max_qos[topic] == 0:
                 return
             subs = self._matching_subscriptions(topic)
@@ -963,6 +1005,7 @@ class MQTT:
             self._last_subscribe = time.monotonic()
 
             await self._async_wait_for_mid_or_raise(mid, result)
+            async_dispatcher_send(self.hass, MQTT_PROCESSED_SUBSCRIPTIONS, chunk_list)
 
     async def _async_perform_unsubscribes(self) -> None:
         """Perform pending MQTT client unsubscribes."""
@@ -1137,7 +1180,7 @@ class MQTT:
             if subscription.encoding is not None:
                 try:
                     payload = msg.payload.decode(subscription.encoding)
-                except (AttributeError, UnicodeDecodeError):
+                except AttributeError, UnicodeDecodeError:
                     _LOGGER.warning(
                         "Can't decode payload %s on %s with encoding %s (for %s)",
                         msg.payload[0:8192],

@@ -1,7 +1,5 @@
 """Test Workday component setup process."""
 
-from __future__ import annotations
-
 from datetime import datetime
 
 from freezegun.api import FrozenDateTimeFactory
@@ -45,6 +43,7 @@ async def test_update_options(
     new_options["add_holidays"] = ["2023-04-12"]
 
     hass.config_entries.async_update_entry(entry, options=new_options)
+    await hass.config_entries.async_reload(entry.entry_id)
     await hass.async_block_till_done()
 
     entry_check = hass.config_entries.async_get_entry("1")

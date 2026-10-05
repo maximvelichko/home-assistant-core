@@ -1,7 +1,5 @@
 """Diagnostics support for PlayStation Network."""
 
-from __future__ import annotations
-
 from dataclasses import asdict
 from typing import Any
 
@@ -20,6 +18,11 @@ TO_REDACT = {
     "onlineId",
     "url",
     "username",
+    "onlineId",
+    "accountId",
+    "members",
+    "body",
+    "shareable_profile_link",
 }
 
 
@@ -28,11 +31,12 @@ async def async_get_config_entry_diagnostics(
 ) -> dict[str, Any]:
     """Return diagnostics for a config entry."""
     coordinator = entry.runtime_data.user_data
-
+    groups = entry.runtime_data.groups
     return {
         "data": async_redact_data(
             _serialize_platform_types(asdict(coordinator.data)), TO_REDACT
-        )
+        ),
+        "groups": async_redact_data(groups.data, TO_REDACT),
     }
 
 

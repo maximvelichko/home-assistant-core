@@ -1,7 +1,5 @@
 """Config flow for LG webOS TV integration."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from typing import Any, Self
 from urllib.parse import urlparse
@@ -9,7 +7,11 @@ from urllib.parse import urlparse
 from aiowebostv import WebOsClient, WebOsTvPairError
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
+from homeassistant.config_entries import (
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlowWithReload,
+)
 from homeassistant.const import CONF_CLIENT_SECRET, CONF_HOST
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import config_validation as cv
@@ -60,7 +62,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     @staticmethod
     @callback
-    def async_get_options_flow(config_entry: WebOsTvConfigEntry) -> OptionsFlow:
+    def async_get_options_flow(config_entry: WebOsTvConfigEntry) -> OptionsFlowHandler:
         """Get the options flow for this handler."""
         return OptionsFlowHandler(config_entry)
 
@@ -132,7 +134,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
 
     def is_matching(self, other_flow: Self) -> bool:
         """Return True if other_flow is matching this flow."""
-        return other_flow._host == self._host  # noqa: SLF001
+        return other_flow._host == self._host
 
     async def async_step_reauth(
         self, entry_data: Mapping[str, Any]
@@ -197,7 +199,7 @@ class FlowHandler(ConfigFlow, domain=DOMAIN):
         )
 
 
-class OptionsFlowHandler(OptionsFlow):
+class OptionsFlowHandler(OptionsFlowWithReload):
     """Handle options."""
 
     def __init__(self, config_entry: WebOsTvConfigEntry) -> None:

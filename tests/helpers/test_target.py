@@ -14,7 +14,7 @@ from homeassistant.const import (
     STATE_ON,
     EntityCategory,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     area_registry as ar,
@@ -34,6 +34,29 @@ from tests.common import (
     mock_device_registry,
     mock_registry,
 )
+
+
+async def set_states_and_check_target_events(
+    hass: HomeAssistant,
+    events: list[target.TargetStateChangedData],
+    state: str,
+    entities_to_set_state: list[str],
+    entities_to_assert_change: list[str],
+) -> None:
+    """Toggle the state entities and check for events."""
+    for entity_id in entities_to_set_state:
+        hass.states.async_set(entity_id, state)
+    await hass.async_block_till_done()
+
+    assert len(events) == len(entities_to_assert_change)
+    entities_seen = set()
+    for event in events:
+        state_change_event = event.state_change_event
+        entities_seen.add(state_change_event.data["entity_id"])
+        assert state_change_event.data["new_state"].state == state
+        assert event.targeted_entity_ids == set(entities_to_assert_change)
+    assert entities_seen == set(entities_to_assert_change)
+    events.clear()
 
 
 @pytest.fixture
@@ -222,6 +245,13 @@ def registries_mock(hass: HomeAssistant) -> None:
         labels={"my-label"},
         entity_category=EntityCategory.CONFIG,
     )
+    diag_entity_with_my_label = RegistryEntryWithDefaults(
+        entity_id="light.diag_with_my_label",
+        unique_id="diag_with_my_label",
+        platform="test",
+        labels={"my-label"},
+        entity_category=EntityCategory.DIAGNOSTIC,
+    )
     entity_with_label1_from_device = RegistryEntryWithDefaults(
         entity_id="light.with_label1_from_device",
         unique_id="with_label1_from_device",
@@ -266,6 +296,7 @@ def registries_mock(hass: HomeAssistant) -> None:
             entity_in_area_a.entity_id: entity_in_area_a,
             entity_in_area_b.entity_id: entity_in_area_b,
             config_entity_with_my_label.entity_id: config_entity_with_my_label,
+            diag_entity_with_my_label.entity_id: diag_entity_with_my_label,
             entity_with_label1_and_label2_from_device.entity_id: entity_with_label1_and_label2_from_device,
             entity_with_label1_from_device.entity_id: entity_with_label1_from_device,
             entity_with_label1_from_device_and_different_area.entity_id: entity_with_label1_from_device_and_different_area,
@@ -384,7 +415,11 @@ def registries_mock(hass: HomeAssistant) -> None:
             {ATTR_LABEL_ID: "my-label"},
             False,
             target.SelectedEntities(
-                indirectly_referenced={"light.with_my_label"},
+                indirectly_referenced={
+                    "light.with_my_label",
+                    "light.config_with_my_label",
+                    "light.diag_with_my_label",
+                },
                 missing_labels={"my-label"},
             ),
         ),
@@ -426,12 +461,16 @@ def registries_mock(hass: HomeAssistant) -> None:
         ),
     ],
 )
+@pytest.mark.parametrize(
+    "selection_class", [target.TargetSelection, target.TargetSelectorData]
+)
 @pytest.mark.usefixtures("registries_mock")
 async def test_extract_referenced_entity_ids(
     hass: HomeAssistant,
     selector_config: ConfigType,
     expand_group: bool,
     expected_selected: target.SelectedEntities,
+    selection_class,
 ) -> None:
     """Test extract_entity_ids method."""
     hass.states.async_set("light.Bowl", STATE_ON)
@@ -451,13 +490,44 @@ async def test_extract_referenced_entity_ids(
         order=None,
     )
 
-    target_data = target.TargetSelectorData(selector_config)
+    target_selection = selection_class(selector_config)
     assert (
         target.async_extract_referenced_entity_ids(
-            hass, target_data, expand_group=expand_group
+            hass, target_selection, expand_group=expand_group
         )
         == expected_selected
     )
+
+
+@pytest.mark.parametrize(
+    ("selector_config", "non_primary_entities"),
+    [
+        ({ATTR_AREA_ID: "own-area"}, {"light.config_in_own_area"}),
+        ({ATTR_DEVICE_ID: "device-no-area-id"}, {"light.config_no_area"}),
+        ({ATTR_AREA_ID: "test-area"}, {"light.config_in_area"}),
+    ],
+)
+@pytest.mark.usefixtures("registries_mock")
+async def test_extract_referenced_entity_ids_primary_entities_only(
+    hass: HomeAssistant,
+    selector_config: ConfigType,
+    non_primary_entities: set[str],
+) -> None:
+    """Test that primary_entities_only controls inclusion of config/diagnostic entities."""
+    target_selection = target.TargetSelection(selector_config)
+
+    selected_primary = target.async_extract_referenced_entity_ids(
+        hass, target_selection, expand_group=False, primary_entities_only=True
+    )
+    selected_all = target.async_extract_referenced_entity_ids(
+        hass, target_selection, expand_group=False, primary_entities_only=False
+    )
+
+    assert (
+        selected_all.indirectly_referenced
+        == selected_primary.indirectly_referenced | non_primary_entities
+    )
+    assert non_primary_entities.isdisjoint(selected_primary.indirectly_referenced)
 
 
 async def test_async_track_target_selector_state_change_event_empty_selector(
@@ -482,10 +552,10 @@ async def test_async_track_target_selector_state_change_event(
     hass: HomeAssistant,
 ) -> None:
     """Test async_track_target_selector_state_change_event with multiple targets."""
-    events: list[Event[EventStateChangedData]] = []
+    events: list[target.TargetStateChangedData] = []
 
     @callback
-    def state_change_callback(event: Event[EventStateChangedData]):
+    def state_change_callback(event: target.TargetStateChangedData):
         """Handle state change events."""
         events.append(event)
 
@@ -497,17 +567,9 @@ async def test_async_track_target_selector_state_change_event(
         """Toggle the state entities and check for events."""
         nonlocal last_state
         last_state = STATE_ON if last_state == STATE_OFF else STATE_OFF
-        for entity_id in entities_to_set_state:
-            hass.states.async_set(entity_id, last_state)
-        await hass.async_block_till_done()
-
-        assert len(events) == len(entities_to_assert_change)
-        entities_seen = set()
-        for event in events:
-            entities_seen.add(event.data["entity_id"])
-            assert event.data["new_state"].state == last_state
-        assert entities_seen == set(entities_to_assert_change)
-        events.clear()
+        await set_states_and_check_target_events(
+            hass, events, last_state, entities_to_set_state, entities_to_assert_change
+        )
 
     config_entry = MockConfigEntry(domain="test")
     config_entry.add_to_hass(hass)
@@ -643,3 +705,209 @@ async def test_async_track_target_selector_state_change_event(
     # After unsubscribing, changes should not trigger
     unsub()
     await set_states_and_check_events(targeted_entities, [])
+
+
+async def test_async_track_target_selector_state_change_event_filter(
+    hass: HomeAssistant,
+) -> None:
+    """Test async_track_target_selector_state_change_event with entity filter."""
+    events: list[target.TargetStateChangedData] = []
+
+    filtered_entity = ""
+
+    @callback
+    def entity_filter(entity_ids: set[str]) -> set[str]:
+        return {entity_id for entity_id in entity_ids if entity_id != filtered_entity}
+
+    @callback
+    def state_change_callback(event: target.TargetStateChangedData):
+        """Handle state change events."""
+        events.append(event)
+
+    last_state = STATE_OFF
+
+    async def set_states_and_check_events(
+        entities_to_set_state: list[str], entities_to_assert_change: list[str]
+    ) -> None:
+        """Toggle the state entities and check for events."""
+        nonlocal last_state
+        last_state = STATE_ON if last_state == STATE_OFF else STATE_OFF
+        await set_states_and_check_target_events(
+            hass, events, last_state, entities_to_set_state, entities_to_assert_change
+        )
+
+    config_entry = MockConfigEntry(domain="test")
+    config_entry.add_to_hass(hass)
+
+    entity_reg = er.async_get(hass)
+
+    label = lr.async_get(hass).async_create("Test Label").name
+    label_entity = entity_reg.async_get_or_create(
+        domain="light",
+        platform="test",
+        unique_id="label_light",
+    ).entity_id
+    entity_reg.async_update_entity(label_entity, labels={label})
+
+    targeted_entity = "light.test_light"
+
+    targeted_entities = [targeted_entity, label_entity]
+    await set_states_and_check_events(targeted_entities, [])
+
+    selector_config = {
+        ATTR_ENTITY_ID: targeted_entity,
+        ATTR_LABEL_ID: label,
+    }
+    unsub = target.async_track_target_selector_state_change_event(
+        hass, selector_config, state_change_callback, entity_filter
+    )
+
+    await set_states_and_check_events(
+        targeted_entities, [targeted_entity, label_entity]
+    )
+
+    filtered_entity = targeted_entity
+    # Fire an event so that the targeted entities are re-evaluated
+    hass.bus.async_fire(
+        er.EVENT_ENTITY_REGISTRY_UPDATED,
+        {
+            "action": "update",
+            "entity_id": "light.other",
+            "changes": {},
+        },
+    )
+    await set_states_and_check_events([targeted_entity, label_entity], [label_entity])
+
+    filtered_entity = label_entity
+    # Fire an event so that the targeted entities are re-evaluated
+    hass.bus.async_fire(
+        er.EVENT_ENTITY_REGISTRY_UPDATED,
+        {
+            "action": "update",
+            "entity_id": "light.other",
+            "changes": {},
+        },
+    )
+    await set_states_and_check_events(
+        [targeted_entity, label_entity], [targeted_entity]
+    )
+
+    unsub()
+
+
+async def test_async_track_target_selector_state_change_event_on_entities_update(
+    hass: HomeAssistant,
+) -> None:
+    """Test on_entities_update callback reports added and removed entities."""
+    entity_updates: list[tuple[set[str], set[str]]] = []
+
+    @callback
+    def state_change_callback(event: target.TargetStateChangedData) -> None:
+        """Handle state change events."""
+
+    @callback
+    def on_entities_update(added: set[str], removed: set[str]) -> None:
+        """Track entity set changes."""
+        entity_updates.append((added, removed))
+
+    config_entry = MockConfigEntry(domain="test")
+    config_entry.add_to_hass(hass)
+
+    entity_reg = er.async_get(hass)
+    label_reg = lr.async_get(hass)
+    label = label_reg.async_create("Track Test")
+
+    entity_a = entity_reg.async_get_or_create(
+        domain="light", platform="test", unique_id="track_a"
+    )
+    entity_b = entity_reg.async_get_or_create(
+        domain="light", platform="test", unique_id="track_b"
+    )
+
+    # entity_a starts with the label
+    entity_reg.async_update_entity(entity_a.entity_id, labels={label.label_id})
+
+    hass.states.async_set(entity_a.entity_id, STATE_ON)
+    hass.states.async_set(entity_b.entity_id, STATE_ON)
+    await hass.async_block_till_done()
+
+    unsub = target.async_track_target_selector_state_change_event(
+        hass,
+        {ATTR_LABEL_ID: label.label_id},
+        state_change_callback,
+        on_entities_update=on_entities_update,
+    )
+
+    # Initial setup fires on_entities_update with all entities as "added"
+    assert len(entity_updates) == 1
+    assert entity_updates[-1] == ({entity_a.entity_id}, set())
+    entity_updates.clear()
+
+    # Add label to entity_b → added
+    entity_reg.async_update_entity(entity_b.entity_id, labels={label.label_id})
+    await hass.async_block_till_done()
+
+    assert len(entity_updates) == 1
+    assert entity_updates[-1] == ({entity_b.entity_id}, set())
+    entity_updates.clear()
+
+    # Remove label from entity_a → removed
+    entity_reg.async_update_entity(entity_a.entity_id, labels=set())
+    await hass.async_block_till_done()
+
+    assert len(entity_updates) == 1
+    assert entity_updates[-1] == (set(), {entity_a.entity_id})
+    entity_updates.clear()
+
+    # Remove label from entity_b → removed
+    entity_reg.async_update_entity(entity_b.entity_id, labels=set())
+    await hass.async_block_till_done()
+
+    assert len(entity_updates) == 1
+    assert entity_updates[-1] == (set(), {entity_b.entity_id})
+    entity_updates.clear()
+
+    # Re-add both labels at once — entity_a first, then entity_b
+    entity_reg.async_update_entity(entity_a.entity_id, labels={label.label_id})
+    await hass.async_block_till_done()
+    entity_reg.async_update_entity(entity_b.entity_id, labels={label.label_id})
+    await hass.async_block_till_done()
+
+    assert len(entity_updates) == 2
+    assert entity_updates[0] == ({entity_a.entity_id}, set())
+    assert entity_updates[1] == ({entity_b.entity_id}, set())
+    entity_updates.clear()
+
+    # After unsubscribing, no more callbacks
+    unsub()
+    entity_reg.async_update_entity(entity_a.entity_id, labels=set())
+    await hass.async_block_till_done()
+    assert len(entity_updates) == 0
+
+
+async def test_async_track_target_selector_no_on_entities_update(
+    hass: HomeAssistant,
+) -> None:
+    """Test that on_entities_update is optional and defaults to no callback."""
+    events: list[target.TargetStateChangedData] = []
+
+    @callback
+    def state_change_callback(event: target.TargetStateChangedData) -> None:
+        events.append(event)
+
+    entity_id = "light.test_no_callback"
+    hass.states.async_set(entity_id, STATE_ON)
+    await hass.async_block_till_done()
+
+    # No on_entities_update — should work without errors
+    unsub = target.async_track_target_selector_state_change_event(
+        hass,
+        {ATTR_ENTITY_ID: entity_id},
+        state_change_callback,
+    )
+
+    hass.states.async_set(entity_id, STATE_OFF)
+    await hass.async_block_till_done()
+    assert len(events) == 1
+
+    unsub()

@@ -1,7 +1,5 @@
 """Expose Reolink IP camera VODs as media sources."""
 
-from __future__ import annotations
-
 import datetime as dt
 import logging
 
@@ -422,9 +420,7 @@ class ReolinkVODMediaSource(MediaSource):
             file_name = f"{file.start_time.time()} {file.duration}"
             if file.triggers != file.triggers.NONE:
                 file_name += " " + " ".join(
-                    str(trigger.name).title()
-                    for trigger in file.triggers
-                    if trigger != trigger.NONE
+                    str(trigger.name).title() for trigger in file.triggers
                 )
 
             children.append(

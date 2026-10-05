@@ -1,7 +1,5 @@
 """Support for Airthings sensors."""
 
-from __future__ import annotations
-
 from airthings import AirthingsDevice
 
 from homeassistant.components.sensor import (
@@ -150,7 +148,7 @@ async def async_setup_entry(
 
     coordinator = entry.runtime_data
     entities = [
-        AirthingsHeaterEnergySensor(
+        AirthingsDeviceSensor(
             coordinator,
             airthings_device,
             SENSORS[sensor_types],
@@ -162,7 +160,7 @@ async def async_setup_entry(
     async_add_entities(entities)
 
 
-class AirthingsHeaterEnergySensor(
+class AirthingsDeviceSensor(
     CoordinatorEntity[AirthingsDataUpdateCoordinator], SensorEntity
 ):
     """Representation of a Airthings Sensor device."""

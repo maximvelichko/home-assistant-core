@@ -1,7 +1,5 @@
 """Support for fetching data from Broadlink devices."""
 
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 import logging
@@ -64,6 +62,7 @@ class BroadlinkUpdateManager(ABC, Generic[_ApiT]):
             device.hass,
             _LOGGER,
             name=f"{device.name} ({device.api.model} at {device.api.host[0]})",
+            config_entry=device.config,
             update_method=self.async_update,
             update_interval=self.SCAN_INTERVAL,
         )

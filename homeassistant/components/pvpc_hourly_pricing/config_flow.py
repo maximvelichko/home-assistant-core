@@ -1,7 +1,5 @@
 """Config flow for pvpc_hourly_pricing."""
 
-from __future__ import annotations
-
 from collections.abc import Mapping
 from typing import Any
 
@@ -13,7 +11,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_API_TOKEN, CONF_NAME
 from homeassistant.core import callback
@@ -178,7 +176,7 @@ class TariffSelectorConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(step_id="reauth_confirm", data_schema=data_schema)
 
 
-class PVPCOptionsFlowHandler(OptionsFlow):
+class PVPCOptionsFlowHandler(OptionsFlowWithReload):
     """Handle PVPC options."""
 
     _power: float | None = None

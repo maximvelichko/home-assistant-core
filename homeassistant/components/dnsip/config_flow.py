@@ -1,7 +1,5 @@
 """Adds config flow for dnsip integration."""
 
-from __future__ import annotations
-
 import asyncio
 import contextlib
 from typing import Any, Literal
@@ -14,7 +12,7 @@ from homeassistant.config_entries import (
     ConfigEntry,
     ConfigFlow,
     ConfigFlowResult,
-    OptionsFlow,
+    OptionsFlowWithReload,
 )
 from homeassistant.const import CONF_NAME, CONF_PORT
 from homeassistant.core import callback
@@ -93,7 +91,7 @@ class DnsIPConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for dnsip integration."""
 
     VERSION = 1
-    MINOR_VERSION = 2
+    MINOR_VERSION = 3
 
     @staticmethod
     @callback
@@ -133,8 +131,7 @@ class DnsIPConfigFlow(ConfigFlow, domain=DOMAIN):
             ):
                 errors["base"] = "invalid_hostname"
             else:
-                await self.async_set_unique_id(hostname)
-                self._abort_if_unique_id_configured()
+                self._async_abort_entries_match({CONF_HOSTNAME: hostname})
 
                 return self.async_create_entry(
                     title=name,
@@ -165,7 +162,7 @@ class DnsIPConfigFlow(ConfigFlow, domain=DOMAIN):
         )
 
 
-class DnsIPOptionsFlowHandler(OptionsFlow):
+class DnsIPOptionsFlowHandler(OptionsFlowWithReload):
     """Handle a option config flow for dnsip integration."""
 
     async def async_step_init(
